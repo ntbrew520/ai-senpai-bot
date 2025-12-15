@@ -1,3 +1,4 @@
+import sys
 from csv_loader import load_csv
 from gemini_client import generate_reply
 
@@ -5,20 +6,15 @@ def search_faq_and_answer(user_query: str):
     # CSVを読み込む
     df = load_csv("faq.csv")
     
-    # 【ここが重要】
-    # キーワード検索を廃止し、CSVの中身を「すべて」Geminiに渡すように変更します。
-    # これにより、ユーザーがどんな言葉で質問しても、Geminiが文脈を読んで探してくれるようになります。
-    
+    # コンテキスト作成（全データ読み込み）
     context_text = ""
     for _, row in df.iterrows():
-        # 行ごとにテキスト化して連結
         context_text += f"Q: {row['question']}\nA: {row['answer']}\nTags: {row['tags']}\n---\n"
     
-    # 万が一データが空の場合
     if not context_text:
         context_text = "（FAQデータが読み込めませんでした）"
 
-    # Geminiへの命令文（プロンプト）
+    # プロンプト作成
     prompt = f"""
 あなたは大学の親切な「AI先輩」です。
 以下の「公式FAQリスト」全体を読んで、学生の質問に最も適切な回答をしてください。
@@ -34,5 +30,24 @@ def search_faq_and_answer(user_query: str):
 2. もしリストの中に答えになりそうな情報が全くなければ、「ごめん、その件については僕のメモ（FAQ）には載ってないんだ。教務課に聞いたほうがいいかも」と正直に答えること。
 3. 口調は親しみやすい先輩風で。
 """
-    return generate_reply(prompt)
+    
+    # AIに回答させる
+    answer_text = generate_reply(prompt)
+
+    # ---------------------------------------------------------
+    # 【追加機能】 Renderのログ画面に履歴を表示する
+    # ---------------------------------------------------------
+    print(f"--------------------------------------------------", file=sys.stderr)
+    print(f"📝 [質問] {user_query}", file=sys.stderr)
+    print(f"🤖 [回答] {answer_text}", file=sys.stderr)
+    
+    # もし「載ってない」「わからない」が含まれていたら、目立つように警告ログを出す
+    if "載ってない" in answer_text or "わからない" in answer_text or "教務課" in answer_text:
+        print(f"⚠️ [未解決] この質問はFAQ不足の可能性があります！", file=sys.stderr)
+    
+    print(f"--------------------------------------------------", file=sys.stderr)
+    # ---------------------------------------------------------
+
+    return answer_text
+
 
