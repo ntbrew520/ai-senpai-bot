@@ -4,7 +4,7 @@ import datetime
 import sys
 
 # ==========================================
-# 【追加部分】絶対にアプリを落とさないログ保存機能
+# ログ保存機能（安全装置付き）
 # ==========================================
 def save_log_safely(question, answer):
     try:
@@ -17,13 +17,14 @@ def save_log_safely(question, answer):
         print("DEBUG: ログ保存成功", file=sys.stderr)
         
     except Exception as e:
-        # 【重要】もし保存に失敗しても、エラーを表示するだけで何もしない（アプリを止めない）
-        print(f"DEBUG: ログ保存失敗（でもドンマイ）: {e}", file=sys.stderr)
+        # エラーが出ても無視して進む
+        print(f"DEBUG: ログ保存失敗（無視します）: {e}", file=sys.stderr)
 
 # ==========================================
 # メイン処理
 # ==========================================
-def search_faq_and_answer(user_query: str):
+# 【修正1】ここに async をつける
+async def search_faq_and_answer(user_query: str):
     df = load_csv("faq.csv")
     
     context_text = ""
@@ -47,16 +48,15 @@ def search_faq_and_answer(user_query: str):
 1. 上記のリストにある情報「だけ」を根拠に回答すること。
 2. もしリストの中に答えになりそうな情報が全くなければ、「ごめん、その件については僕のメモ（FAQ）には載ってないんだ。教務課に聞いたほうがいいかも」と正直に答えること。
 3. 口調は親しみやすい先輩風で。
-"""
+""" 
     
-    # Geminiに回答させる
-    answer_text = generate_reply(prompt)
+    # 【修正2】ここに await をつける（これが抜けてました！）
+    # awaitをつけることで、AIの返事が来るまでちゃんと待ちます。
+    answer_text = await generate_reply(prompt)
 
-    # ---------------------------------------------------------
-    # 【追加】わからない時だけログに残す（安全装置付き）
-    # ---------------------------------------------------------
+    # わからない時だけログに残す
+    # (awaitがないと、ここで answer_text が文字じゃなくて「予約票」の状態なのでエラーになっていました)
     if "載ってない" in answer_text or "わからない" in answer_text or "教務課" in answer_text:
-        # ここでさっきの安全な関数を呼ぶ
         save_log_safely(user_query, answer_text)
 
     return answer_text
