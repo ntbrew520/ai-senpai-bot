@@ -13,7 +13,7 @@ def save_log_safely(question, answer):
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(f"[{now}] Q:{question} / A:{answer}\n")
             
-        # 2. ログ画面に中身を表示（ここを追加しました！）
+        # 2. ログ画面に中身を表示
         print(f"--------------------------------------------------", file=sys.stderr)
         print(f"📝 [保存された質問] {question}", file=sys.stderr)
         print(f"🤖 [保存された回答] {answer}", file=sys.stderr)
@@ -25,7 +25,7 @@ def save_log_safely(question, answer):
 # ==========================================
 # メイン処理
 # ==========================================
-def search_faq_and_answer(user_query: str):
+async def search_faq_and_answer(user_query: str):
     df = load_csv("faq.csv")
     
     context_text = ""
@@ -51,11 +51,13 @@ def search_faq_and_answer(user_query: str):
 3. 口調は親しみやすい先輩風で。
 """
     
-    answer_text = generate_reply(prompt)
+    # 【修正】ここで await を忘れずに入れています
+    answer_text = await generate_reply(prompt)
 
     # わからない時だけログに残す
     if "載ってない" in answer_text or "わからない" in answer_text or "教務課" in answer_text:
         save_log_safely(user_query, answer_text)
 
     return answer_text
+
 
