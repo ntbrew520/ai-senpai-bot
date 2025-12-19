@@ -61,5 +61,3 @@ def search_faq_and_answer(user_query: str):
 
     return answer_text
 
-"""
-    return generate_reply(prompt)
